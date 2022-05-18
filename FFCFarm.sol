@@ -1461,10 +1461,9 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
         address _strat
     ) external onlyOwner {
         massUpdatePools();
-        if(address(_strat) != address(0)){
-            stratAddress[_strat] = true;
-            require(IStrategy(_strat).wantAddress() == address(_want), "Error wantAddress");
-        }
+        require(!stratAddress[_strat],"Repeat strat");
+        stratAddress[_strat] = true;
+        require(IStrategy(_strat).wantAddress() == address(_want), "Error wantAddress");
         uint256 lastRewardBlock =
             block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
