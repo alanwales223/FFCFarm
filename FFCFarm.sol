@@ -1429,10 +1429,11 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
 
 
     uint256 public ownerFFCReward = 0; // 12%
-
-    uint256 public FFCMaxSupply = 1000 *1e8 * 1e18;
+    uint256 public constant maxOwnerFFCReward = 120;
+    uint256 public constant maxPerBlock = 347222222222222216396800;
+    uint256 public constant FFCMaxSupply = 1000 *1e8 * 1e18;
     uint256 public FFCPerBlock = 0;
-    uint256 public startBlock = 3888888; //https://bscscan.com/block/countdown/3888888
+    uint256 public constant startBlock = 3888888; //https://bscscan.com/block/countdown/3888888
     PoolInfo[] public poolInfo; // Info of each pool.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
     mapping(address => bool) public stratAddress;
@@ -1452,12 +1453,9 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
     function add(
         uint256 _allocPoint,
         IERC20 _want,
-        bool _withUpdate,
         address _strat
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
+    ) external onlyOwner {
+        massUpdatePools();
         if(stratAddress[_strat] == false &&address(_strat) != address(0)){
             stratAddress[_strat] = true;
             require(IStrategy(_strat).wantAddress() == address(_want), "Error wantAddress");
@@ -1478,12 +1476,9 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
 
     function set(
         uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
+        uint256 _allocPoint
+    ) external onlyOwner {
+        massUpdatePools();
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
@@ -1557,16 +1552,18 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
         }
     }
 
-
-    function setOwnerFFCReward(uint256 _ownerFFCReward) public onlyOwner{
+    function setOwnerFFCReward(uint256 _ownerFFCReward) external onlyOwner{
+        require(_ownerFFCReward<maxOwnerFFCReward, "ownerFFCReward too high");
         ownerFFCReward = _ownerFFCReward;
     }
-    function setRewardPerBlock(uint256 _rewawrdPerBlock) public onlyOwner{
+
+    function setRewardPerBlock(uint256 _rewawrdPerBlock) external onlyOwner{
+        require(_rewawrdPerBlock<maxPerBlock,"rewawrdPerBlock too high");
         massUpdatePools();
         FFCPerBlock = _rewawrdPerBlock;
     }
 
-    function setFFCAddress(address _ffcAddress) public onlyOwner{
+    function setFFCAddress(address _ffcAddress) external onlyOwner{
         FFCv2 = _ffcAddress;
     }
 
@@ -1602,7 +1599,7 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-    function depositAll(uint256 _pid) public {
+    function depositAll(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
         deposit(_pid, pool.want.balanceOf(msg.sender));
     }
@@ -1682,25 +1679,8 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
-    function withdrawAll(uint256 _pid) public {
+    function withdrawAll(uint256 _pid) external {
         withdraw(_pid, uint256(-1));
-    }
-
-    function emergencyWithdraw(uint256 _pid) public nonReentrant {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        uint256 wantLockedTotal =
-            IStrategy(poolInfo[_pid].strat).wantLockedTotal();
-        uint256 sharesTotal = IStrategy(poolInfo[_pid].strat).sharesTotal();
-        uint256 amount = user.shares.mul(wantLockedTotal).div(sharesTotal);
-
-        IStrategy(poolInfo[_pid].strat).withdraw(msg.sender, amount);
-
-        pool.want.safeTransfer(address(msg.sender), amount);
-        emit EmergencyWithdraw(msg.sender, _pid, amount);
-        user.shares = 0;
-        user.rewardDebt = 0;
     }
 
     function safeFFCTransfer(address _to, uint256 _FFCAmt) internal {
