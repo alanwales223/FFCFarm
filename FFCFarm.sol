@@ -1459,7 +1459,7 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
         uint256 _allocPoint,
         IERC20 _want,
         address _strat
-    ) public onlyOwner {
+    ) external onlyOwner {
         massUpdatePools();
         if(address(_strat) != address(0)){
             stratAddress[_strat] = true;
@@ -1482,7 +1482,7 @@ contract FFCFarmV2 is Ownable, ReentrancyGuard {
     function set(
         uint256 _pid,
         uint256 _allocPoint
-    ) public onlyOwner {
+    ) external onlyOwner {
         massUpdatePools();
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
